@@ -10,4 +10,4 @@ export const updateContactSchema = Joi.object({
   name: Joi.string(),
   email: Joi.string().email(),
   phone: Joi.number(),
-}).min(1);
+});
