@@ -19,21 +19,20 @@ app.use((_, res) => {
 });
 
 app.use((err, req, res, next) => {
-  const { status = 500, message = "Server error" } = err;
-  res.status(status).json({ message });
+  res.status(res.statusCode).json({ message: err.message });
 });
 
 const PORT = process.env.PORT || 3000;
-const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.shvl3po.mongodb.net?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = process.env.DB_CONNECTION_STRING;
 
 const connection = mongoose.connect(uri, {
-    autoIndex: true,
-    dbName: 'db-contacts'
+  autoIndex: true,
+  dbName: "db-contacts",
 });
 
 connection
   .then(() => {
-    console.log('Database connection successful');
+    console.log("Database connection successful");
     app.listen(PORT, function () {
       console.log(`Server running. Use our API on port: ${PORT}`);
     });

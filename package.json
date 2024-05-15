@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./app.js",
-    "start-local": "node --env-file .env ./app.js",
+    "start-local": "node --env-file .env --watch ./app.js",
     "dev": "nodemon ./app.js"
   },
   "dependencies": {

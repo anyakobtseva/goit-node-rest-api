@@ -5,10 +5,19 @@ import {
   deleteContact,
   createContact,
   updateContact,
-  updateStatusContact
+  updateStatusContact,
 } from "../controllers/contactsControllers.js";
+import { isValidObjectId } from "mongoose";
 
 const contactsRouter = express.Router();
+
+contactsRouter.use("/:id", (req, res, next) => {
+  if (!isValidObjectId(req.params.id)) {
+    res.status(400);
+    next(new Error("Invalid Id"));
+  }
+  next('route');
+})
 
 contactsRouter.get("/", getAllContacts);
 
