@@ -10,7 +10,7 @@ export const updateContactSchema = Joi.object({
   name: Joi.string(),
   email: Joi.string().email(),
   phone: Joi.number(),
-}).min(1);
+}).min(1).message('Body must have at least one field');
 
 export const updateFavoriteContactSchema = Joi.object({
   favorite: Joi.boolean().required()
