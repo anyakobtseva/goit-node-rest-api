@@ -33,8 +33,10 @@ export const createUser = async (req, res, next) => {
     );
 
     res.status(201).json({
-      email: newUser.email,
-      subscription: newUser.subscription,
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+      },
     });
   } catch (error) {
     next(error);
