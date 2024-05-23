@@ -8,11 +8,12 @@ export const getUserById = async (id) => {
   return Users.findOne({ _id: id }, { __v: 0 });
 };
 
-export const addUser = async (email, password, subscription = "starter") => {
+export const addUser = async (email, password, subscription = "starter", avatarURL) => {
   return Users.create({
     email,
     password,
     subscription,
+    avatarURL
   });
 };
 
