@@ -11,11 +11,11 @@ import {
 import { auth } from "../auth.js";
 
 const maxFileSize = 10000000;
-const upload = multer({ dest: '/tmp', limits: { fileSize: maxFileSize }});
-const usersRouter = express.Router();
+const upload = multer({ dest: "/tmp", limits: { fileSize: maxFileSize } });
 
-usersRouter.post("/register", createUser);
+const usersRouter = express.Router();
 usersRouter.post("/login", loginUser);
+usersRouter.post("/register", createUser);
 usersRouter.post("/logout", auth, logoutUser);
 usersRouter.get("/current", auth, getCurrentUser);
 usersRouter.patch("/", auth, updateUserSubscription);

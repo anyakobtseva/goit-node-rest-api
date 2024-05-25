@@ -3,14 +3,15 @@ import gravatar from "gravatar";
 import path from "path";
 import Jimp from "jimp";
 import fs from "fs/promises";
+import jwt from "jsonwebtoken";
 import { userSchema, updateUserSchema } from "../schemas/usersSchema.js";
 import {
   getUserByEmail,
   updateUser,
   addUser,
 } from "../services/usersService.js";
-import jwt from "jsonwebtoken";
-import { storeImagePath } from "../app.js";
+
+import { storeImagePath } from "../config.js";
 
 const secret = process.env.SECRET;
 const saltRounds = 10;
@@ -19,7 +20,7 @@ const userResponse = (user) => {
   return {
     email: user.email,
     subscription: user.subscription,
-    avatarURL: user.avatarURL,
+    avatarURL: user.avatarUrl,
   };
 };
 
@@ -64,7 +65,6 @@ export const loginUser = async (req, res, next) => {
       res.status(400);
       throw Error(error.message);
     }
-
     const userFromDB = await getUserByEmail(value.email);
 
     const passwordMatch = await bcrypt.compare(
@@ -83,7 +83,9 @@ export const loginUser = async (req, res, next) => {
     };
 
     const token = jwt.sign(payload, secret, { expiresIn: "1d" });
+
     const updatedUser = await updateUser(userFromDB._id, { token });
+
     res.status(200).send({
       token,
       user: userResponse(updatedUser),
@@ -129,26 +131,29 @@ export const updateUserSubscription = async (req, res, next) => {
 };
 
 export const uploadAvatar = async (req, res, next) => {
-  const { path: temporaryName, originalname } = req.file;
-  const fileExtenstion = originalname.split(".").pop();
-  const fileName = path.join(
-    storeImagePath,
-    `${req.user._id.toString()}.${fileExtenstion}`
-  );
-  const url = `${req.protocol}://${req.get("host")}/avatars/${
-    req.user._id
-  }.${fileExtenstion}`;
+  let temporaryName;
   try {
+    if (!req.file) {
+      res.status(400);
+      throw Error("File not provided");
+    }
+    const { path: fPath, originalname } = req.file;
+    temporaryName = fPath;
+    const fileExtenstion = originalname.split(".").pop().toLowerCase();
+    const fileName = path.join(
+      storeImagePath,
+      `${req.user._id.toString()}.${fileExtenstion}`
+    );
+    const url = `/avatars/${req.user._id}.${fileExtenstion}`;
     await Jimp.read(temporaryName).then((file) => {
       file.resize(250, 250).write(temporaryName);
     });
 
     await fs.rename(temporaryName, fileName);
     await updateUser(req.user._id, { avatarURL: url });
+    res.status(200).send({ avatarURL: url });
   } catch (err) {
-    await fs.unlink(temporaryName);
+    req.file && (await fs.unlink(temporaryName));
     return next(err);
   }
-
-  res.status(200).send({ avatarURL: url });
 };
