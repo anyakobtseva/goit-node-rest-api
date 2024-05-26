@@ -7,6 +7,8 @@ import {
   getCurrentUser,
   updateUserSubscription,
   uploadAvatar,
+  verifyUserEmail,
+  sendVerificationEmail
 } from "../controllers/usersControllers.js";
 import { auth } from "../auth.js";
 
@@ -16,6 +18,8 @@ const upload = multer({ dest: "/tmp", limits: { fileSize: maxFileSize } });
 const usersRouter = express.Router();
 usersRouter.post("/login", loginUser);
 usersRouter.post("/register", createUser);
+usersRouter.post("/verify", sendVerificationEmail);
+usersRouter.get("/verify/:verificationToken", verifyUserEmail);
 usersRouter.post("/logout", auth, logoutUser);
 usersRouter.get("/current", auth, getCurrentUser);
 usersRouter.patch("/", auth, updateUserSubscription);

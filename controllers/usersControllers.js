@@ -1,17 +1,20 @@
 import bcrypt from "bcrypt";
 import gravatar from "gravatar";
 import path from "path";
+import crypto from "crypto";
 import Jimp from "jimp";
 import fs from "fs/promises";
 import jwt from "jsonwebtoken";
-import { userSchema, updateUserSchema } from "../schemas/usersSchema.js";
+import { userSchema, updateUserSchema, verifyUserEmailSchema } from "../schemas/usersSchema.js";
 import {
   getUserByEmail,
   updateUser,
   addUser,
+  getUserByFilter,
 } from "../services/usersService.js";
 
 import { storeImagePath } from "../config.js";
+import { sendEmail } from "../utils.js";
 
 const secret = process.env.SECRET;
 const saltRounds = 10;
@@ -38,17 +41,20 @@ export const createUser = async (req, res, next) => {
       throw Error("Email in use");
     }
 
+    const verificationToken = crypto.randomUUID();
     const hashedPassword = await bcrypt.hash(value.password, saltRounds);
-
-    //generate avatar
     const avatarURL = gravatar.url(value.email, { s: "250" }, false);
 
-    const newUser = await addUser(
-      value.email,
-      hashedPassword,
-      value.subscription,
-      avatarURL
-    );
+    const newUser = await addUser({
+      email: value.email,
+      password: hashedPassword,
+      subscription: value.subscription || "starter",
+      avatarURL,
+      verificationToken,
+    });
+
+    const link = `http://localhost:3000/api/users/verify/${newUser.verificationToken}`;
+    await sendEmail(value.email, { link });
 
     res.status(201).json({
       user: userResponse(newUser),
@@ -66,6 +72,11 @@ export const loginUser = async (req, res, next) => {
       throw Error(error.message);
     }
     const userFromDB = await getUserByEmail(value.email);
+
+    if (!userFromDB.verify) {
+      res.status(401);
+      throw Error("Email is not verified");
+    }
 
     const passwordMatch = await bcrypt.compare(
       value.password,
@@ -155,5 +166,58 @@ export const uploadAvatar = async (req, res, next) => {
   } catch (err) {
     req.file && (await fs.unlink(temporaryName));
     return next(err);
+  }
+};
+
+export const verifyUserEmail = async (req, res, next) => {
+  try {
+    const verificationToken = req.params.verificationToken;
+    if (!verificationToken) {
+      res.status(400);
+      throw Error("Token not provided");
+    }
+    const userFromDB = await getUserByFilter({ verificationToken });
+    if (!userFromDB) {
+      res.status(404);
+      throw Error("User not found");
+    }
+
+    await updateUser(userFromDB._id, {
+      verificationToken: null,
+      verify: true,
+    });
+
+    res.status(200).send({
+      message: "Verification successful",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendVerificationEmail = async (req, res, next) => {
+  try {
+    const { error, value } = verifyUserEmailSchema.validate(req.body);
+    if (error) {
+      res.status(400);
+      throw Error(error.message);
+    }
+    const userFromDB = await getUserByEmail(value.email);
+    if (!userFromDB) {
+      res.status(404);
+      throw Error("User not found");
+    }
+    if (userFromDB.verify) {
+      res.status(400);
+      throw Error("Verification has already been passed");
+    }
+    const link = `http://localhost:3000/api/users/verify/${userFromDB.verificationToken}`;
+    await sendEmail(value.email, { link });
+
+    res.status(200).send({
+      message: "Verification email sent",
+    });
+  } catch (error) {
+    next(error);
   }
 };
